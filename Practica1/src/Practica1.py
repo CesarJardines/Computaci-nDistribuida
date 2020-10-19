@@ -181,9 +181,8 @@ class NodoConvergecast(Nodo):
             print("El proceso %d envió el mensaje \"%s\" a sus vecinos"%(self.id_nodo,msg))
             break
 
-#Problema 1
-## Main para conocer los vecinos de los vecinos ##
-'''
+#El main, comentar y descomentar las líneas del cuerpo sgún el algoritmo que quiera probarse
+
 if __name__ == "__main__":
 
     envi = simpy.Environment()
@@ -192,38 +191,26 @@ if __name__ == "__main__":
     grafica = []
     adyacencias = [[1,2,3],[0,2,3],[0,1,4,5],[0,1,4],[2,3],[2]]
     for i in range(0, len(adyacencias)):
-        grafica.append(NodoVecinos(i, adyacencias[i], pipe.crea_canal_de_entrada(), pipe))
 
+    #Problema 1
+    ## Main para conocer los vecinos de los vecinos ##
+    '''
+        grafica.append(NodoVecinos(i, adyacencias[i], pipe.crea_canal_de_entrada(), pipe))
     for i in range(0, len(adyacencias)):
         envi.process(grafica[i].conocerVecinos(envi))
-'''
-#Problema 2
-## Main para construir el árbol ##
+    '''
 
-if __name__ == "__main__":
-
-    envi = simpy.Environment()
-    pipe = Canales.CanalVecinos.CanalVecinos(envi)
-
-    grafica = []
-    adyacencias = [[1,2,3],[0,2,3],[0,1,4,5],[0,1,4],[2,3],[2]]
-    for i in range(0, len(adyacencias)):
+    #Problema 2
+    ## Main para construir el árbol ##
+    '''
         grafica.append(NodoArbol(i, adyacencias[i], pipe.crea_canal_de_entrada(), pipe))
-
     for i in range(0, len(adyacencias)):
         envi.process(grafica[i].generaArbol(envi))
-'''
-#Main para el algoritmo 3
-if __name__ == "__main__":
-
-    envi = simpy.Environment()
-    pipe = Canales.CanalVecinos.CanalVecinos(envi)
-
-    grafica = []
-    adyacencias = [[1,2,3],[0,2,3],[0,1,4,5],[0,1,4],[2,3],[2]]
-    for i in range(0, len(adyacencias)):
+    '''
+    #Problema 3
+    ##Main para el algoritomo de broadcast ##
+    '''
         grafica.append(NodoBroadcast(i, adyacencias[i], pipe.crea_canal_de_entrada(), pipe))
-
     for i in range(0, len(adyacencias)):
         envi.process(grafica[i].broadcast(envi,"hola :)"))
-'''
+    '''
