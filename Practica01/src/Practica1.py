@@ -2,6 +2,9 @@ import simpy
 import Canales.CanalVecinos
 from Nodo import *
 
+# # # PRÁCTICA 1. Computación distribuída # # #
+# Fhernanda Romo Olea
+# César Eduardo Jardínes Mendoza (el vaquero)
 
 # Problema 1. Algoritmo para conocer los vecinos de los vecinos
 class NodoVecinos(Nodo):
@@ -67,7 +70,8 @@ class NodoArbol(Nodo):
 
 
     def generaArbol(self, envi):
-        #Si el nodo es el nodo distinguido se inicializa y manda a sus vecinos el mensaje, hago diferencia entre Go's y Back's para conocer en qué momento de la ejecución me encuentro.
+        #Si el nodo es el nodo distinguido se inicializa y manda a sus vecinos el mensaje,
+        #hago diferencia entre Go's y Back's para conocer en qué momento de la ejecución me encuentro.
         if self.id_nodo is 0:
             self.padre=0
             #Esperamos 1 ronda en lo que se recibe el primer mensaje
@@ -143,7 +147,8 @@ class NodoBroadcast(Nodo):
         msg = yield self.canal_entrada.get()
         yield envi.timeout(1)
         print("El proceso %d ha recibido el mensaje en la ronda %d"%(self.id_nodo,envi.now))
-        #El mensaje le llegará nuevamente al proceso distinguido, después de eso entrará al while y saldrá del ciclo.
+        # El mensaje le llegará nuevamente al proceso distinguido, después de eso entrará
+        # al while y saldrá del ciclo.
         while True:
             self.mensaje=msg
             self.canal_salida.envia(msg,self.vecinos)
@@ -159,71 +164,89 @@ class NodoConvergecast(Nodo):
         self.vecinos=vecinos
         self.canal_entrada=canal_entrada
         self.canal_salida=canal_salida
-        #Atributos de la clase, mensaje es el mensaje que enviaremos
-        self.mensaje=None
+        #Atributos de la clase, mensaje es el conjunto de mensajes recolectados
+        #por los vértices
+        self.mensaje=list()
+        self.padre=None
+        self.hijos=list()
 
-    #Método broadcast, inunda la gráfica con el mensaje
-    def broadcast(self, envi, mensaje):
-        #Determinamos a 0 como el nodo distinguido y la fuente del mensaje
-        if self.id_nodo is 0:
-            self.mensaje = mensaje
-            print("El proceso %d es el proceso distinguido, envía el mensaje a sus vecinos"%self.id_nodo)
-            self.canal_salida.envia(self.mensaje,self.vecinos)
+    # Método convergecast, recolecta todos los mensajes, desde las hojas a la
+    # raíz. Lista define quién es el padre y los hijos de un nodo, si el nodo
+    # no tiene hijos, entonces es vacía.
+    def convergecast(self,envi,lista,mensaje):
+        self.padre=lista[0]
+        self.hijos=lista[1]
+        self.mensaje.append(mensaje)
+        if len(self.hijos)==0:
+            self.canal_salida.envia(self.mensaje,[self.padre])
+            print("Las hoja %d envió el mensaje %s a su padre en la ronda %d"%(self.id_nodo,str(self.mensaje),envi.now))
 
-        #Sus vecinos reciben el mensaje en la siguiente ronda
-        msg = yield self.canal_entrada.get()
         yield envi.timeout(1)
-        print("El proceso %d ha recibido el mensaje en la ronda %d"%(self.id_nodo,envi.now))
-        #El mensaje le llegará nuevamente al proceso distinguido, después de eso entrará al while y saldrá del ciclo.
         while True:
-            self.mensaje=msg
-            self.canal_salida.envia(msg,self.vecinos)
-            print("El proceso %d envió el mensaje \"%s\" a sus vecinos"%(self.id_nodo,msg))
-            break
+            msg = yield self.canal_entrada.get()
+            print("------------------")
+            print("El proceso %d recibe un mensaje de su hijo en la ronda %d"%(self.id_nodo,envi.now))
+            # Concatenamos los mensajes que vayamos recibiendo
+            self.mensaje = self.mensaje+msg
+            # Necesitamos verificar si el nodo ya recolectó todos los mensajes esperados.
+            if self.padre != self.id_nodo and len(self.mensaje)==len(self.hijos)+1:
+                yield envi.timeout(1)
+                self.canal_salida.envia(self.mensaje,[self.padre])
+                print("El proceso %d envía el mensaje %s a su padre"%(self.id_nodo,str(self.mensaje)))
+            else:
+                # Si llegamos a un nodo que es padre de sí mismo, ya estamos
+                # en la raíz, unimos los mensajes y los operamos.
+                if len(self.mensaje)>len(self.vecinos):
+                    print("------------------\nEl proceso raíz acaba de recibir todos los mensajes de la gráfica\n------------------")
+                    print("El mensaje es la unión de todos los mensajes de la gráfica:\n"+str(self.mensaje))
+                    break
 
-#Problema 1
-## Main para conocer los vecinos de los vecinos ##
-'''
+
+
+#El main, comentar y descomentar las líneas del cuerpo sgún el algoritmo que quiera probarse, las lineas de código correspondientes a la ejecución de cada algoritmo se encuentran comentadas en órden.
+
+# ** Ocasionalmente al descomentar aparece un error que dice que la identación está mal, en ese caso hay que cortar el bloque de código del algoritmo que se desee ejecutar y pegarlo justo debajo de la línea 210 ** #
+
 if __name__ == "__main__":
 
     envi = simpy.Environment()
     pipe = Canales.CanalVecinos.CanalVecinos(envi)
-
     grafica = []
     adyacencias = [[1,2,3],[0,2,3],[0,1,4,5],[0,1,4],[2,3],[2]]
+
+# Problema 1
+## Bloque para conocer los vecinos de los vecinos ##
+'''
     for i in range(0, len(adyacencias)):
         grafica.append(NodoVecinos(i, adyacencias[i], pipe.crea_canal_de_entrada(), pipe))
-
     for i in range(0, len(adyacencias)):
         envi.process(grafica[i].conocerVecinos(envi))
 '''
-#Problema 2
-## Main para construir el árbol ##
 
-if __name__ == "__main__":
-
-    envi = simpy.Environment()
-    pipe = Canales.CanalVecinos.CanalVecinos(envi)
-
-    grafica = []
-    adyacencias = [[1,2,3],[0,2,3],[0,1,4,5],[0,1,4],[2,3],[2]]
+# Problema 2
+## Bloque para construir el árbol generador de una gráfica##
+'''
     for i in range(0, len(adyacencias)):
         grafica.append(NodoArbol(i, adyacencias[i], pipe.crea_canal_de_entrada(), pipe))
-
     for i in range(0, len(adyacencias)):
         envi.process(grafica[i].generaArbol(envi))
 '''
-#Main para el algoritmo 3
-if __name__ == "__main__":
-
-    envi = simpy.Environment()
-    pipe = Canales.CanalVecinos.CanalVecinos(envi)
-
-    grafica = []
-    adyacencias = [[1,2,3],[0,2,3],[0,1,4,5],[0,1,4],[2,3],[2]]
+# Problema 3
+## Bloque para el algoritomo de broadcast sobre una gráfica ##
+'''
     for i in range(0, len(adyacencias)):
         grafica.append(NodoBroadcast(i, adyacencias[i], pipe.crea_canal_de_entrada(), pipe))
-
     for i in range(0, len(adyacencias)):
         envi.process(grafica[i].broadcast(envi,"hola :)"))
+'''
+# Problema 4. extra. Algoritmo de convergecast
+'''
+    for i in range(0, len(adyacencias)):
+        grafica.append(NodoConvergecast(i, adyacencias[i], pipe.crea_canal_de_entrada(), pipe))
+    envi.process(grafica[0].convergecast(envi,[0,[1,2,3]],"Soy el proceso 0"))
+    envi.process(grafica[1].convergecast(envi,[0,[]],"Soy el proceso 1"))
+    envi.process(grafica[2].convergecast(envi,[0,[4,5]],"Soy el proceso 2"))
+    envi.process(grafica[3].convergecast(envi,[0,[]],"Soy el proceso 3"))
+    envi.process(grafica[4].convergecast(envi,[2,[]],"Soy el proceso 4"))
+    envi.process(grafica[5].convergecast(envi,[2,[]],"Soy el proceso 5"))
 '''
